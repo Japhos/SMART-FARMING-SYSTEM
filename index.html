@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Farming System</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+<!-- Firebase v8 SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-analytics.js"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:'Poppins',sans-serif;
+  background:#f4f9f4;
+}
+
+/* LOGIN */
+.login-box{
+  max-width:400px;
+  margin:100px auto;
+  background:#fff;
+  padding:30px;
+  border-radius:12px;
+  box-shadow:0 6px 15px rgba(0,0,0,.1);
+}
+.login-box h2{
+  text-align:center;
+  color:#1b5e20;
+}
+.login-box input{
+  width:100%;
+  padding:12px;
+  margin:10px 0;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+.login-box button{
+  width:100%;
+  padding:12px;
+  background:#2e7d32;
+  border:none;
+  color:#fff;
+  border-radius:8px;
+  font-size:16px;
+  cursor:pointer;
+}
+.error{
+  color:red;
+  text-align:center;
+}
+
+/* DASHBOARD */
+header{
+  background:linear-gradient(135deg,#1b5e20,#4caf50);
+  color:#fff;
+  text-align:center;
+  padding:25px;
+  position:relative;
+}
+header h1{margin:0;font-size:28px;}
+header h2{margin-top:5px;font-weight:300;font-size:18px;}
+header button{
+  position:absolute;
+  top:20px;
+  right:20px;
+  padding:8px 12px;
+  background:#fff;
+  color:#2e7d32;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+.container{
+  padding:20px;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+  gap:20px;
+}
+.card{
+  background:#fff;
+  padding:20px;
+  border-radius:12px;
+  box-shadow:0 6px 15px rgba(0,0,0,.1);
+}
+.card h3{margin-top:0;color:#1b5e20;}
+.value{
+  font-size:40px;
+  font-weight:600;
+  color:#2e7d32;
+}
+.status{
+  font-size:28px;
+  font-weight:bold;
+}
+.on{color:green;}
+.off{color:red;}
+
+.logs{
+  max-height:250px;
+  overflow-y:auto;
+}
+footer{
+  text-align:center;
+  padding:15px;
+  background:#e8f5e9;
+  color:#2e7d32;
+}
+.hidden{display:none;}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div class="login-box" id="loginBox">
+  <h2>Admin Login</h2>
+  <input type="text" id="username" placeholder="Username">
+  <input type="password" id="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <p class="error" id="error"></p>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="hidden">
+
+<header>
+  <h1>NYAMIRA NATIONAL POLYTECHNIC</h1>
+  <h2>SMART FARMING SYSTEM</h2>
+  <button id="logoutBtn">Logout</button>
+</header>
+
+<div class="container">
+  <div class="card">
+    <h3>Soil Moisture</h3>
+    <div class="value" id="moisture">--%</div>
+  </div>
+
+  <div class="card">
+    <h3>Pump Status</h3>
+    <div class="status off" id="pump">OFF</div>
+  </div>
+
+  <div class="card">
+    <h3>System Logs</h3>
+    <ul class="logs" id="logs"></ul>
+  </div>
+</div>
+
+<footer>
+  TVET Fair | IoT Smart Agriculture Demonstration
+</footer>
+
+</div>
+
+<script>
+/* HARD-CODED LOGIN */
+function login(){
+  const u = document.getElementById("username").value;
+  const p = document.getElementById("password").value;
+
+  if(u === "admin" && p === "admin123"){
+    document.getElementById("loginBox").style.display="none";
+    document.getElementById("dashboard").classList.remove("hidden");
+  }else{
+    document.getElementById("error").innerText="Invalid login credentials";
+  }
+}
+
+/* LOGOUT */
+document.getElementById("logoutBtn").addEventListener("click", function(){
+  document.getElementById("dashboard").classList.add("hidden");
+  document.getElementById("loginBox").style.display = "block";
+  document.getElementById("username").value = "";
+  document.getElementById("password").value = "";
+  document.getElementById("error").innerText = "";
+});
+
+/* Firebase config (v8) */
+var firebaseConfig = {
+  apiKey: "AIzaSyCqkcyLQSad_Y6Am4m1Gajw5NcFxhFcE1U",
+  authDomain: "smart-farming-system-77958.firebaseapp.com",
+  projectId: "smart-farming-system-77958",
+  storageBucket: "smart-farming-system-77958.firebasestorage.app",
+  messagingSenderId: "59899466378",
+  appId: "1:59899466378:web:0116ed7bf25ab8b9cf1373",
+  measurementId: "G-F62NDMN47V",
+  databaseURL: "https://smart-farming-system-77958-default-rtdb.firebaseio.com"
+};
+
+firebase.initializeApp(firebaseConfig);
+firebase.analytics();
+var db = firebase.database();
+
+/* Soil moisture */
+db.ref("smartFarm/moisture").on("value", snap=>{
+  document.getElementById("moisture").innerText = snap.val() + "%";
+});
+
+/* Pump status */
+db.ref("smartFarm/pumpState").on("value", snap=>{
+  let pump=document.getElementById("pump");
+  if(snap.val()==1){
+    pump.innerText="ON";
+    pump.className="status on";
+  }else{
+    pump.innerText="OFF";
+    pump.className="status off";
+  }
+});
+
+/* Logs */
+db.ref("smartFarm/logs").on("child_added", snap=>{
+  let log=snap.val();
+  let li=document.createElement("li");
+  li.innerText=log.event+" | Moisture: "+log.moisture+"%";
+  document.getElementById("logs").prepend(li);
+});
+</script>
+
+</body>
+</html>
